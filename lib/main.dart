@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-
+import 'package:window_manager/window_manager.dart';
 
 class AppColors {
   static const Color primary = contentColorCyan;
@@ -29,10 +29,15 @@ class AppColors {
   static const Color contentColorCyan = Color(0xFF50E4FF);
 }
 class LineChartSample10 extends StatefulWidget {
-  const LineChartSample10({super.key});
+  const LineChartSample10({
+      super.key,
+      this.lineColor = AppColors.contentColorBlue,
+      this.func = defaultFunc,
+  });
 
-  final Color sinColor = AppColors.contentColorBlue;
-  final Color cosColor = AppColors.contentColorPink;
+  final Color lineColor;
+  final double Function(double) func;
+  static double defaultFunc(double x) => 0;
 
   @override
   State<LineChartSample10> createState() => _LineChartSample10State();
@@ -40,8 +45,8 @@ class LineChartSample10 extends StatefulWidget {
 
 class _LineChartSample10State extends State<LineChartSample10> {
   final limitCount = 100;
-  var sinPoints = <FlSpot>[];
-  var cosPoints = <FlSpot>[];
+  var leftPoints = <FlSpot>[];
+  var rightPoints = <FlSpot>[];
 
   double xValue = 0;
   double step = 0.05;
@@ -51,26 +56,18 @@ class _LineChartSample10State extends State<LineChartSample10> {
   @override
   void initState() {
     super.initState();
-  
-    /*
-    for (int i = 0; i < limitCount; i++) {
-      sinPoints.add(FlSpot(xValue, math.sin(xValue)));
-      cosPoints.add(FlSpot(xValue, math.cos(xValue)));
-      xValue += step;
-    }
-*/
 
-    timer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
+    timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       setState(() {
         if (index == 0) {
-          var temp = sinPoints;
-          sinPoints = cosPoints;
-          cosPoints = temp;
+          var temp = leftPoints;
+          leftPoints = rightPoints;
+          rightPoints = temp;
         }
         
-        sinPoints.add(FlSpot(index * step, math.sin(xValue)));
-        if (cosPoints.isNotEmpty) {
-          cosPoints.removeAt(0);
+        leftPoints.add(FlSpot(index * step, widget.func(xValue)));
+        if (rightPoints.isNotEmpty) {
+          rightPoints.removeAt(0);
         }
       });
       index = (index + 1) % limitCount;
@@ -80,40 +77,12 @@ class _LineChartSample10State extends State<LineChartSample10> {
 
   @override
   Widget build(BuildContext context) {
-    return sinPoints.isNotEmpty
-        ? Column(
+    return leftPoints.isNotEmpty
+        ? Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 12),
-              Text(
-                'x: ${xValue.toStringAsFixed(1)}',
-                style: const TextStyle(
-                  color: AppColors.mainTextColor2,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'sin: ${sinPoints.length.toStringAsFixed(1)}',
-                style: TextStyle(
-                  color: widget.sinColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'cos: ${cosPoints.length.toStringAsFixed(1)}',
-                style: TextStyle(
-                  color: widget.cosColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(
-                height: 12,
-              ),
               AspectRatio(
-                aspectRatio: 16.0/9.0,
+                aspectRatio: 4,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 24.0),
                   child: LineChart(
@@ -130,8 +99,8 @@ class _LineChartSample10State extends State<LineChartSample10> {
                       ),
                       borderData: FlBorderData(show: false),
                       lineBarsData: [
-                        sinLine(sinPoints),
-                        cosLine(cosPoints),
+                        line(leftPoints),
+                        line(rightPoints),
                       ],
                       titlesData: const FlTitlesData(
                         show: false,
@@ -146,7 +115,7 @@ class _LineChartSample10State extends State<LineChartSample10> {
         : Container();
   }
 
-  LineChartBarData sinLine(List<FlSpot> points) {
+  LineChartBarData line(List<FlSpot> points) {
     return LineChartBarData(
       spots: points,
       dotData: const FlDotData(
@@ -154,19 +123,10 @@ class _LineChartSample10State extends State<LineChartSample10> {
       ),
       barWidth: 4,
       isCurved: false,
+      color: widget.lineColor,
     );
   }
 
-  LineChartBarData cosLine(List<FlSpot> points) {
-    return LineChartBarData(
-      spots: points,
-      dotData: const FlDotData(
-        show: false,
-      ),
-      barWidth: 4,
-      isCurved: false,
-    );
-  }
 
   @override
   void dispose() {
@@ -175,19 +135,35 @@ class _LineChartSample10State extends State<LineChartSample10> {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  WindowManager.instance.setFullScreen(true);
   runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
+  static double _sin(double x) => math.sin(x);
+  static double _cos(double x) => math.cos(5 * x);
+  static double _saw(double x) => x % 2 - 1;
+  static double _sqr(double x) => (x % 2 < 1) ? 1 : -1;
+
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
       home: Scaffold(
         body: Center(
-          child: LineChartSample10(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(child: LineChartSample10(lineColor: AppColors.contentColorBlue,   func: _sin,)),
+              Expanded(child: LineChartSample10(lineColor: AppColors.contentColorCyan,   func: _cos,)),
+              Expanded(child: LineChartSample10(lineColor: AppColors.contentColorGreen,  func: _saw,)),
+              Expanded(child: LineChartSample10(lineColor: AppColors.contentColorOrange, func: _sqr,)),
+            ],
+          ),
         ),
       ),
     );
