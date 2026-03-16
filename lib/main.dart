@@ -137,8 +137,8 @@ class _LineChartSample10State extends State<LineChartSample10> {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
-  WindowManager.instance.setFullScreen(true);
+  //await windowManager.ensureInitialized();
+  //WindowManager.instance.setFullScreen(true);
   runApp(const MainApp());
 }
 
